@@ -1,30 +1,47 @@
 import com.google.common.collect.*;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.lang.Character.isDigit;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 class InputProcessor {
-
-//    private Multiset<AbstractMap.SimpleImmutableEntry<String, String>> bigrams = HashMultiset.create(20000000);
-    private Multiset<String> bigrams2 = HashMultiset.create(20000000);
-    private Multiset<String> wordCounts = HashMultiset.create();
-    private StringBuilder plotText;
+    private StringBuilder plotText = new StringBuilder();
     private Pattern delimiters = Pattern.compile("[ .,:!?]");
-    private HashSet<String> stopwords;
-//        MultiSet<Bigram> bigrams3 = HashMultiset.create();
-    private Multimap<String, String> bigrams4 = ArrayListMultimap.create();
+    private Multimap<String, String> bigrams = ArrayListMultimap.create();
+    private HashSet<String> stopwords = new HashSet<>(Arrays.asList(Stopwords.VALUES));
+    private Multiset<String> wordCounts;
 
-    InputProcessor() {
-        this.plotText = new StringBuilder();
-        this.stopwords = new HashSet<>(Arrays.asList(Stopwords.VALUES));
+    InputProcessor(Multiset<String> wordCounts) {
+        this.wordCounts = wordCounts;
     }
+
+    Multimap<String, String> processPlot(String filename) {
+        try {
+            Path plotList = Paths.get(filename);
+            Stream<String> lines = Files.lines(plotList, ISO_8859_1);
+            lines
+//                    .limit(100000)
+                    .forEachOrdered(this::processLine);
+            processLine("--"); //last entry will be processed too
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return bigrams;
+    }
+
 
     private int i = 0;
 
-    void consume(String line) {
+    private void processLine(String line) {
         if (line.startsWith("PL:")) {
             plotText.append(line.substring(3)); //erase PL:_
         } else if (line.startsWith("MV")) {
@@ -90,8 +107,6 @@ class InputProcessor {
     }
 
     private void addBigrams(String text) {
-//        System.out.println("text: " + text);
-//        text = text.toLowerCase(Locale.ENGLISH);
         List<String> tokensList = delimiters
                 .splitAsStream(text.toLowerCase(Locale.ENGLISH))
                 .filter(token -> !"".equals(token))
@@ -108,16 +123,9 @@ class InputProcessor {
                 token1 = token2;
                 token2 = tokenIterator.next();
                 if (!stopwords.contains(token2) && !stopwords.contains(token1)) {
-//                    bigrams.add(new AbstractMap.SimpleImmutableEntry<>(token1, token2));
-//                    bigrams2.add(token1 + " " + token2);
-//                    bigrams3.add(new Bigram(token1, token2));
-                    bigrams4.put(token1, token2);
+                    bigrams.put(token1, token2);
                 }
             }
         }
-    }
-
-    Multimap<String, String> getBigrams() {
-        return bigrams4;
     }
 }
