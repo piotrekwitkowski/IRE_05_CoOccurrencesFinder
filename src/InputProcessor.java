@@ -1,5 +1,4 @@
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Multiset;
+import com.google.common.collect.*;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -9,15 +8,16 @@ import static java.lang.Character.isDigit;
 
 class InputProcessor {
 
-    private Multiset<AbstractMap.SimpleImmutableEntry<String, String>> bigrams;
-    private Multiset<String> bigrams2 = HashMultiset.create();
+//    private Multiset<AbstractMap.SimpleImmutableEntry<String, String>> bigrams = HashMultiset.create(20000000);
+    private Multiset<String> bigrams2 = HashMultiset.create(20000000);
     private Multiset<String> wordCounts = HashMultiset.create();
     private StringBuilder plotText;
     private Pattern delimiters = Pattern.compile("[ .,:!?]");
     private HashSet<String> stopwords;
+//        MultiSet<Bigram> bigrams3 = HashMultiset.create();
+    private Multimap<String, String> bigrams4 = ArrayListMultimap.create();
 
     InputProcessor() {
-        this.bigrams = HashMultiset.create();
         this.plotText = new StringBuilder();
         this.stopwords = new HashSet<>(Arrays.asList(Stopwords.VALUES));
     }
@@ -91,9 +91,9 @@ class InputProcessor {
 
     private void addBigrams(String text) {
 //        System.out.println("text: " + text);
-        text = text.toLowerCase(Locale.ENGLISH);
+//        text = text.toLowerCase(Locale.ENGLISH);
         List<String> tokensList = delimiters
-                .splitAsStream(text)
+                .splitAsStream(text.toLowerCase(Locale.ENGLISH))
                 .filter(token -> !"".equals(token))
                 .collect(Collectors.toList());
 
@@ -108,13 +108,16 @@ class InputProcessor {
                 token1 = token2;
                 token2 = tokenIterator.next();
                 if (!stopwords.contains(token2) && !stopwords.contains(token1)) {
-                    bigrams2.add(token1 + " " + token2);
+//                    bigrams.add(new AbstractMap.SimpleImmutableEntry<>(token1, token2));
+//                    bigrams2.add(token1 + " " + token2);
+//                    bigrams3.add(new Bigram(token1, token2));
+                    bigrams4.put(token1, token2);
                 }
             }
         }
     }
 
-    Multiset<String> getBigrams() {
-        return bigrams2;
+    Multimap<String, String> getBigrams() {
+        return bigrams4;
     }
 }

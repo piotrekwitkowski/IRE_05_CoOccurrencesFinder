@@ -2,14 +2,11 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableMultiset;
-import com.google.common.collect.Multiset;
-import com.google.common.collect.Multisets;
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Ints;
+import com.google.common.collect.Multimap;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
@@ -34,7 +31,6 @@ public class Main {
     }
 
     private static void processPlotAsStreamOrdered(InputProcessor ip, Path filename) {
-
         try {
             Stream<String> lines = Files.lines(filename, ISO_8859_1);
             lines.forEachOrdered(ip::consume);
@@ -46,65 +42,93 @@ public class Main {
     }
 
 
-    private static void saveResults(Multiset<String> topBigrams, Path
-            outputFile) {
-
+    private static void saveResults(Multimap<String, String> topBigrams, Path outputFile) {
         System.out.println("top bigrams size: " + topBigrams.size());
-        System.out.println("generating copyHighestCountFirst...");
-
-//        topBigrams.entrySet().stream().limit(20).forEach(System.out::println);
+        System.out.println("top bigrams keySet() size: " + topBigrams.keySet().size());
+        System.out.println("top bigrams values() size: " + topBigrams.values().size());
 
         System.out.println("real magic...");
         System.out.println();
 
-        Ordering<Multiset.Entry<String>> highestCountFirst =
-                new Ordering<Multiset.Entry<String>>() {
-                    @Override
-                    public int compare(Multiset.Entry<String> e1, Multiset.Entry<String> e2) {
-                        return Ints.compare(e1.getCount(), e2.getCount());
-                    }
-                };
+        topBigrams
+                .keySet()
+                .stream() //Iterate the `keys`
+//                .filter(key -> !stopwords.contains(key) || wordcounts)
+                .map(i -> i + " : " +  //For each key
+                        topBigrams.get(i)
+                                .stream() //stream the values.
+                                .collect( //Group and count
+                                        Collectors.groupingBy(
+                                                java.util.function.Function.identity(),
+                                                Collectors.counting()
+                                        )
+                                )
+                )
+//                .forEach(System.out::println)
+        ;
 
-        ImmutableMultiset.Builder<String> top100Builder = ImmutableMultiset.builder();
-        for (Multiset.Entry<String> topEntry :
-                highestCountFirst.greatestOf(topBigrams.entrySet(), 10)) {
-            top100Builder.addCopies(topEntry.getElement(), topEntry.getCount());
-        }
+//        topBigrams.asMap().entrySet().stream() //Iterate the `keys`
+//                .map(i -> i.getKey() + " : " +  //For each key
+//                        i.getValue()
+//                                .stream() //stream the values.
+//                                .collect( //Group and count
+//                                        Collectors.groupingBy(
+//                                                java.util.function.Function.identity(),
+//                                                Collectors.counting()
+//                                        )
+//                                )
+//                )
+////                .forEach(System.out::println)
+//        ;
 
-        ImmutableMultiset<String> results = top100Builder.build();
-//        for (Multiset.Entry<String> e : results.entrySet()) {
-//            System.out.println(e);
+
+//        Ordering<Multiset.Entry<String>> highestCountFirst =
+//                new Ordering<Multiset.Entry<String>>() {
+//                    @Override
+//                    public int compare(Multiset.Entry<String> e1, Multiset.Entry<String> e2) {
+//                        return Ints.compare(e1.getCount(), e2.getCount());
+//                    }
+//                };
+//
+//
+//
+//        ImmutableMultiset.Builder<String> top100Builder = ImmutableMultiset.builder();
+//        for (Multiset.Entry<String> topEntry :
+//                highestCountFirst.greatestOf(topBigrams.entrySet(), 10)) {
+//            top100Builder.addCopies(topEntry.getElement(), topEntry.getCount());
 //        }
-        results.entrySet().stream().forEachOrdered(System.out::println);
 
-//        Iterable<Multiset.Entry<String>> entriesSortedByCount =
-//                Multisets.copyHighestCountFirst(topBigrams).entrySet();
-//
-//
-//        Multisets
-//                .copyHighestCountFirst(topBigrams)
+//        Ordering<Multiset.Entry<AbstractMap.SimpleImmutableEntry>> highestCountFirst =
+//                new Ordering<Multiset.Entry<AbstractMap.SimpleImmutableEntry>>() {
+//                    @Override
+//                    public int compare(Multiset.Entry<AbstractMap.SimpleImmutableEntry> e1,
+//                                       Multiset.Entry<AbstractMap.SimpleImmutableEntry> e2) {
+//                        return Ints.compare(e1.getCount(), e2.getCount());
+//                    }
+//                };
+
+//        topBigrams
 //                .entrySet()
 //                .stream()
-//                .limit(100)
-//                .forEachOrdered(System.out::println);
-
-//        PriorityQueue<String> pq= new PriorityQueue<AbstractMap.SimpleImmutableEntry<String, String>>(100,
-// Comparator.comparing(String::length));
-
-
-//        ImmutableMultiset<AbstractMap.SimpleImmutableEntry<String, String>> results =
-//                copyHighestCountFirst(topBigrams);
-
-//        results.entrySet().stream().limit(100).forEachOrdered(System.out::println);
-
-//        for (int i = 0; i < 100; i++) {
-//        }
+//                .sorted(Comparator.comparing(Multiset.Entry::getCount))
+//                .forEach(System.out::println);
 //
-//        for (Multiset.Entry<AbstractMap.SimpleImmutableEntry<String, String>> e : topBigrams.entrySet()) {
-//            System.out.println(e.getElement() + " " + e.getCount());
-//        }
-//        topBigrams = null;
+//        topBigrams
+//                .entrySet()
+//                .stream()
+//                .collect(greatest(10, Comparator.comparingInt(Multiset.Entry::getCount)))
+//                .forEach(System.out::println);
 
+//        ImmutableMultiset.Builder<AbstractMap.SimpleImmutableEntry> top100Builder = ImmutableMultiset.builder();
+//        for (Multiset.Entry<AbstractMap.SimpleImmutableEntry> topEntry :
+//                highestCountFirst.greatestOf(topBigrams.entrySet(), 100)) {
+//            top100Builder.addCopies(topEntry.getElement(), topEntry.getCount());
+//        }
+
+//        top100Builder
+//                .build()
+//                .entrySet()
+//                .forEach(System.out::println);
 
     }
 
