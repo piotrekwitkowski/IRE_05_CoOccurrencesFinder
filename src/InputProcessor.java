@@ -38,8 +38,7 @@ class InputProcessor {
         return bigrams;
     }
 
-
-    private int i = 0;
+//    private int i = 0;
 
     private void processLine(String line) {
         if (line.startsWith("PL:")) {
@@ -49,7 +48,7 @@ class InputProcessor {
             addBigrams(title);
         } else if (line.startsWith("-")) {
             if (plotText.length() > 0) {
-                System.out.println(i++);
+//                System.out.println(i++);
                 String plot = plotText.toString();
                 addBigrams(plot);
             }
@@ -72,7 +71,7 @@ class InputProcessor {
 
     private String extractMovieTitle(String line) {
         int pos = line.lastIndexOf("(");
-        String title = line.substring(4, pos);
+        String title = line.substring(4, pos-1);
 
         //(VG) erased instead of (2011)? try this:
         int pos1 = title.lastIndexOf("(");

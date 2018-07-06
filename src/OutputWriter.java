@@ -1,15 +1,15 @@
 import com.google.common.collect.*;
+import com.google.common.primitives.Doubles;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 class OutputWriter {
     private final Multiset<String> wordCounts;
-
+    private int TOP_COUNT = 1000;
 
     OutputWriter(Multiset<String> wordCounts) {
         this.wordCounts = wordCounts;
@@ -26,103 +26,57 @@ class OutputWriter {
 
     private void writeToFile(String outputFile, Multimap<String, String> bigrams) throws FileNotFoundException {
         PrintWriter writer = new PrintWriter(outputFile);
-        ArrayList<String> topBigrams = getTopBigrams(bigrams);
-        topBigrams.stream().limit(1000).forEach(writer::println);
+        ImmutableMap<String, Double> topBigrams = getTopBigrams(bigrams);
+        highestCountFirst.greatestOf(topBigrams.entrySet(), TOP_COUNT).forEach(e ->
+                writer.println(e.getKey() + "\t" + e.getValue()));
         writer.close();
     }
 
-    private ArrayList<String> getTopBigrams(Multimap<String, String> bigrams) {
-        ImmutableMap.Builder<String, Integer> topBigrams = ImmutableMap.builder();
-
-//        bigrams
-//                .keySet()
-//                .stream() //Iterate the `keys`
-//                .filter(key -> wordCounts.count(key) > 10000)
-//                .forEach(key -> {
-//                    HashMultiset<Object> objects = HashMultiset.create();
-//                    bigrams.asMap().entrySet()
-//                });
+    private ImmutableMap<String, Double> getTopBigrams(Multimap<String, String> bigrams) {
+        ImmutableMap.Builder<String, Double> topBigrams = ImmutableMap.builder();
 
         bigrams
                 .asMap()
                 .entrySet()
                 .stream()
-                .filter(key -> wordCounts.count(key.getKey()) > 50000)
-                .forEach(key -> {
-                    System.out.println(key);
-                    Map<String, Long> values = key
+                .filter(word1 -> wordCounts.count(word1.getKey()) > TOP_COUNT)
+                .forEach(word1 -> {
+                    word1
                             .getValue()
                             .stream()
-                            .filter(value -> wordCounts.count(value) > 50000)
+                            .filter(word2 -> wordCounts.count(word2) > TOP_COUNT)
                             .collect(Collectors.groupingBy(
                                     Function.identity(),
                                     Collectors.counting()
-                            ));
+                            )).forEach((word2, count) -> {
 
-                    for (Map.Entry e : values.entrySet()) System.out.println("   " + e);
-                });
+                        double bigramRatio =
+                                2 * (double) count / (wordCounts.count(word1.getKey()) + wordCounts.count(word2));
 
 
-
-//        for (String key : bigrams.keySet()) {
-//            if (wordCounts.count(key) > 1000) {
-//                Map<String, Long> collect = bigrams
-//                        .get(key)
-//                        .stream()
-//                        .collect( //Group and count
-//                                Collectors.groupingBy(
-//                                        Function.identity(),
-//                                        Collectors.counting()
-//                                )
+//                        System.out.print(
+//                                "2 * " + count + "\t/ " +
+//                                " (" +
+//                                wordCounts.count(word1.getKey()) + " + " +
+//                                wordCounts.count(word2) + ")\t= "
 //                        );
-//                collect.forEach(this::print);
-//            }
-//        }
+//                        System.out.println(bigramRatio);
+//                        System.out.println(count);
 
-//        bigrams
-//                .keySet()
-//                .stream() //Iterate the `keys`
-//                .filter(key -> wordCounts.count(key) > 10000)
-//
-//                .map(i -> i + " : " +  //For each key
-//                        bigrams.get(i)
-//                                .stream() //stream the values.
-//                                .collect( //Group and count
-//                                        Collectors.groupingBy(
-//                                                java.util.function.Function.identity(),
-//                                                Collectors.counting()
-//                                        )
-//                                )
-//                )
-//                .forEach(topBigrams::add)
-//        ;
-//
-        return null;
+                        topBigrams.put(word1.getKey() + "\t" + word2, bigramRatio);
+                    });
+                });
+        return topBigrams.build();
     }
 
-
-//        bigrams
-//                .keySet()
-//                .stream() //Iterate the `keys`
-//                .filter(wordCounts.count(key) < 1000)
-//                .map(i -> i + " : " +  //For each key
-//                        bigrams.get(i)
-//                                .stream() //stream the values.
-//                                .collect( //Group and count
-//                                        Collectors.groupingBy(
-//                                                java.util.function.Function.identity(),
-//                                                Collectors.counting()
-//                                        )
-//                                )
-//                )
-//                .forEach(topBigrams::add)
-//        ;
-
-
-    private void print(String s, Long aLong) {
-        System.out.println(s + " ," + aLong);
-    }
-
+    private Ordering<Map.Entry<String, Double>> highestCountFirst =
+            new Ordering<Map.Entry<String, Double>>() {
+                @Override
+                public int compare(Map.Entry<String, Double> e1,
+                                   Map.Entry<String, Double> e2) {
+                    return Doubles.compare(e1.getValue(), e2.getValue());
+                }
+            };
 
     private void printStats(Multimap<String, String> bigrams) {
         System.out.println("top bigrams size: " + bigrams.size());
