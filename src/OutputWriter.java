@@ -26,13 +26,13 @@ class OutputWriter {
 
     private void writeToFile(String outputFile, Multimap<String, String> bigrams) throws FileNotFoundException {
         PrintWriter writer = new PrintWriter(outputFile);
-        ImmutableMap<String, Double> topBigrams = getTopBigrams(bigrams);
-        highestCountFirst.greatestOf(topBigrams.entrySet(), TOP_COUNT).forEach(e ->
-                writer.println(e.getKey() + "\t" + e.getValue()));
+        for (Map.Entry<String, Double> e : highestCountFirst.greatestOf(getRatios(bigrams).entrySet(), TOP_COUNT)) {
+            writer.println(e.getKey() + "\t" + e.getValue());
+        }
         writer.close();
     }
 
-    private ImmutableMap<String, Double> getTopBigrams(Multimap<String, String> bigrams) {
+    private ImmutableMap<String, Double> getRatios(Multimap<String, String> bigrams) {
         ImmutableMap.Builder<String, Double> topBigrams = ImmutableMap.builder();
 
         bigrams
@@ -40,32 +40,14 @@ class OutputWriter {
                 .entrySet()
                 .stream()
                 .filter(word1 -> wordCounts.count(word1.getKey()) > TOP_COUNT)
-                .forEach(word1 -> {
-                    word1
-                            .getValue()
-                            .stream()
-                            .filter(word2 -> wordCounts.count(word2) > TOP_COUNT)
-                            .collect(Collectors.groupingBy(
-                                    Function.identity(),
-                                    Collectors.counting()
-                            )).forEach((word2, count) -> {
-
-                        double bigramRatio =
-                                2 * (double) count / (wordCounts.count(word1.getKey()) + wordCounts.count(word2));
-
-
-//                        System.out.print(
-//                                "2 * " + count + "\t/ " +
-//                                " (" +
-//                                wordCounts.count(word1.getKey()) + " + " +
-//                                wordCounts.count(word2) + ")\t= "
-//                        );
-//                        System.out.println(bigramRatio);
-//                        System.out.println(count);
-
-                        topBigrams.put(word1.getKey() + "\t" + word2, bigramRatio);
-                    });
-                });
+                .forEach(word1 -> word1
+                        .getValue()
+                        .stream()
+                        .filter(word2 -> wordCounts.count(word2) > TOP_COUNT)
+                        .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                        .forEach((word2, count) ->
+                                topBigrams.put(word1.getKey() + "\t" + word2,
+                                2 * (double) count / (wordCounts.count(word1.getKey()) + wordCounts.count(word2)))));
         return topBigrams.build();
     }
 
@@ -84,4 +66,3 @@ class OutputWriter {
         System.out.println("top bigrams values() size: " + bigrams.values().size());
     }
 }
-
