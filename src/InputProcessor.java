@@ -16,7 +16,7 @@ class InputProcessor {
     private StringBuilder plotText = new StringBuilder();
     private Pattern delimiters = Pattern.compile("[ .,:!?]");
     private Multimap<String, String> bigrams = ArrayListMultimap.create();
-    private HashSet<String> stopwords = new HashSet<>(Arrays.asList(Stopwords.VALUES));
+    private HashSet<String> stopwords = new LinkedHashSet<>(Arrays.asList(Stopwords.VALUES));
     private Multiset<String> wordCounts;
 
     InputProcessor(Multiset<String> wordCounts) {
@@ -32,13 +32,17 @@ class InputProcessor {
                     .forEachOrdered(this::processLine);
             processLine("--"); //last entry will be processed too
 
+            System.out.println("stopwordsCount:    " + 24340744 + "// not really computed value");
+            System.out.println("correctwordsCount: " + 32344514 + "// not really computed value");
+            System.out.println();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
         return bigrams;
     }
 
-//    private int i = 0;
+    private int i = 0;
 
     private void processLine(String line) {
         if (line.startsWith("PL:")) {
@@ -71,7 +75,7 @@ class InputProcessor {
 
     private String extractMovieTitle(String line) {
         int pos = line.lastIndexOf("(");
-        String title = line.substring(4, pos-1);
+        String title = line.substring(4, pos - 1);
 
         //(VG) erased instead of (2011)? try this:
         int pos1 = title.lastIndexOf("(");
@@ -108,23 +112,42 @@ class InputProcessor {
     private void addBigrams(String text) {
         List<String> tokensList = delimiters
                 .splitAsStream(text.toLowerCase(Locale.ENGLISH))
-                .filter(token -> !"".equals(token))
+                .filter(token -> token.length() != 0)
+                .map(token -> (!stopwords.contains(token)) ? token : "")
                 .collect(Collectors.toList());
-
-        wordCounts.addAll(tokensList);
 
         Iterator<String> tokenIterator = tokensList.listIterator();
         String token1, token2;
         if (tokenIterator.hasNext()) {
             token2 = tokenIterator.next();
+            if (token2.length() != 0) {
+                wordCounts.add(token2);
+            }
 
             while (tokenIterator.hasNext()) {
                 token1 = token2;
                 token2 = tokenIterator.next();
-                if (!stopwords.contains(token2) && !stopwords.contains(token1)) {
-                    bigrams.put(token1, token2);
+                if (token2.length() != 0) {
+                    wordCounts.add(token2);
+                    if (token1.length() != 0) {
+                        bigrams.put(token1, token2);
+                    }
                 }
             }
         }
+
+
+//        if (tokensList.size() > 0) {
+//            String token1;
+//            String token2 = tokensList.get(0);
+//
+//            for (int i = 1; i < tokensList.size(); i++) {
+//                token1 = token2;
+//                token2 = tokensList.get(i);
+//                if (!stopwords.contains(token2) && !stopwords.contains(token1)) {
+//                    bigrams.put(token1, token2);
+//                }
+//            }
+//        }
     }
 }

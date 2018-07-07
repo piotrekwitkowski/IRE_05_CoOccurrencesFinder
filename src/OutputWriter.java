@@ -3,6 +3,7 @@ import com.google.common.primitives.Doubles;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -26,14 +27,20 @@ class OutputWriter {
 
     private void writeToFile(String outputFile, Multimap<String, String> bigrams) throws FileNotFoundException {
         PrintWriter writer = new PrintWriter(outputFile);
-        for (Map.Entry<String, Double> e : highestCountFirst.greatestOf(getRatios(bigrams).entrySet(), TOP_COUNT)) {
-            writer.println(e.getKey() + "\t" + e.getValue());
-        }
+
+        getRatios(bigrams)
+                .entrySet()
+                .stream()
+                .collect(Comparators.greatest(TOP_COUNT, highestCountFirst))
+                .stream()
+                .map(e -> e.getKey() + "\t" + e.getValue())
+                .forEach(writer::println);
+
         writer.close();
     }
 
-    private ImmutableMap<String, Double> getRatios(Multimap<String, String> bigrams) {
-        ImmutableMap.Builder<String, Double> topBigrams = ImmutableMap.builder();
+    private HashMap<String, Double> getRatios(Multimap<String, String> bigrams) {
+        HashMap<String, Double> bigramRatios = new HashMap<>();
 
         bigrams
                 .asMap()
@@ -42,13 +49,15 @@ class OutputWriter {
                 .filter(word1 -> wordCounts.count(word1.getKey()) > TOP_COUNT)
                 .forEach(word1 -> word1
                         .getValue()
-                        .stream()
+                        .parallelStream()
                         .filter(word2 -> wordCounts.count(word2) > TOP_COUNT)
                         .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+
                         .forEach((word2, count) ->
-                                topBigrams.put(word1.getKey() + "\t" + word2,
-                                2 * (double) count / (wordCounts.count(word1.getKey()) + wordCounts.count(word2)))));
-        return topBigrams.build();
+                                bigramRatios.put(word1.getKey() + "\t" + word2,
+                                        2.0 * count / (wordCounts.count(word1.getKey()) + wordCounts
+                                                .count(word2)))));
+        return bigramRatios;
     }
 
     private Ordering<Map.Entry<String, Double>> highestCountFirst =
@@ -61,8 +70,10 @@ class OutputWriter {
             };
 
     private void printStats(Multimap<String, String> bigrams) {
-        System.out.println("top bigrams size: " + bigrams.size());
-        System.out.println("top bigrams keySet() size: " + bigrams.keySet().size());
-        System.out.println("top bigrams values() size: " + bigrams.values().size());
+        System.out.println("wordCount entrySet: " + wordCounts.entrySet().size());
+        System.out.println("wordCount:          " + wordCounts.size());
+        System.out.println();
+        System.out.println("top bigrams keySet: " + bigrams.keySet().size());
+        System.out.println("top bigrams values: " + bigrams.values().size());
     }
 }
